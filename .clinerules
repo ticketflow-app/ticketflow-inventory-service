@@ -1,0 +1,235 @@
+# Reglas de trabajo de Cline
+
+## 1. Fuente de contexto
+
+- La carpeta `/docs_ia/contexto` es la única fuente autorizada para conocer:
+  - requisitos
+  - atributos de calidad
+  - arquitectura
+  - diseño
+  - estrategia de pruebas
+  - restricciones del proyecto
+
+- No asumir información que no esté definida en `/docs_ia/contexto`.
+
+- Antes de realizar una tarea relevante, revisar los archivos de `/docs_ia/contexto` necesarios para esa tarea.
+
+## 2. Decisiones arquitectónicas
+
+- No tomar decisiones arquitectónicas importantes de forma autónoma.
+
+- Cuando sea necesario tomar una decisión, primero analizar alternativas y proponer una recomendación.
+
+- Crear la propuesta en `/docs_ia/decisiones` en formato Markdown.
+
+- Esperar aprobación humana antes de implementar una decisión arquitectónica propuesta.
+
+- Una decisión aprobada debe quedar documentada en `/docs_ia/decisiones`.
+
+## 3. Código
+
+- Puede leer y modificar el código del proyecto cuando la tarea haya sido aprobada.
+
+- No realizar cambios importantes basados en suposiciones.
+
+- Antes de cambios arquitectónicos, explicar brevemente qué se modificará y por qué.
+
+- Mantener coherencia con las decisiones aprobadas.
+
+- Todo el código debe utilizar nomenclatura en inglés.
+
+- Los nombres de variables, métodos, clases, interfaces, paquetes, endpoints, DTOs, entidades, tablas, columnas y archivos de código deben estar en inglés.
+
+- Los comentarios y documentación técnica dentro del código deben estar en inglés.
+
+- No utilizar nombres en español dentro del código, salvo que sean nombres externos definidos obligatoriamente por una API, librería o requisito existente.
+
+- Mantener una nomenclatura consistente y descriptiva siguiendo las convenciones del lenguaje y framework utilizado.
+
+## 4. Documentación
+
+- Toda decisión arquitectónica o técnica importante debe documentarse en Markdown.
+
+- Las decisiones deben utilizar identificadores consecutivos:
+  `DA-001`, `DA-002`, `DA-003`, etc.
+
+- No sobrescribir decisiones anteriores. Si una decisión cambia, crear una nueva decisión que explique el cambio.
+
+- Las decisiones propuestas deben indicar claramente:
+  - contexto
+  - problema
+  - alternativas consideradas
+  - recomendación
+  - ventajas
+  - desventajas
+  - impacto
+  - estado de la decisión
+
+- Una decisión debe marcarse como `PROPUESTA` hasta recibir aprobación humana.
+
+- Solo después de recibir aprobación explícita puede marcarse como `APROBADA` y aplicarse al proyecto.
+
+## 5. Pruebas
+
+- No modificar la estrategia de pruebas definida en `/docs_ia/contexto` sin proponer primero el cambio.
+
+- Cuando corresponda, crear o modificar pruebas junto con el código.
+
+- No introducir nuevas herramientas o frameworks de pruebas sin analizar previamente su necesidad y compatibilidad.
+
+## 6. Gestión de dependencias
+
+- Antes de agregar, eliminar, actualizar o reemplazar cualquier dependencia, revisar primero los archivos relevantes de `/docs_ia/contexto`.
+
+- Revisar siempre el archivo `pom.xml` actual antes de proponer cambios de dependencias.
+
+- Clasificar las dependencias analizadas como:
+  - indispensables
+  - recomendadas
+  - opcionales
+  - no justificadas actualmente
+
+- Para cada dependencia propuesta indicar:
+  - propósito
+  - funcionalidad que proporciona
+  - relación con la arquitectura
+  - requisito que satisface
+  - alternativas posibles
+  - impacto técnico
+  - compatibilidad con las versiones actuales del proyecto
+
+- Verificar la compatibilidad de las dependencias con:
+  - versión de Java
+  - versión de Spring Boot
+  - versión de Maven
+  - arquitectura definida
+
+- No agregar dependencias por conveniencia, costumbre o sugerencia automática de una herramienta.
+
+- Aplicar el principio de mínima dependencia: utilizar únicamente las dependencias justificadas por los requisitos y la arquitectura aprobada.
+
+- No agregar, eliminar, actualizar ni modificar dependencias sin autorización humana explícita.
+
+- Antes de modificar `pom.xml`, presentar un análisis y una propuesta de cambios.
+
+- Después de recibir autorización, realizar únicamente los cambios aprobados.
+
+- Toda modificación importante de dependencias debe quedar documentada en `/docs_ia/decisiones`.
+
+## 7. Uso de herramientas
+
+- Puede leer archivos.
+
+- Puede crear y modificar archivos cuando la tarea haya sido aprobada.
+
+- Puede ejecutar comandos cuando sean necesarios para la tarea aprobada.
+
+- No ejecutar comandos que modifiquen el proyecto sin autorización cuando dichos cambios no hayan sido aprobados.
+
+- Antes de ejecutar comandos destructivos o potencialmente peligrosos, solicitar aprobación.
+
+- Antes de instalar paquetes, dependencias, herramientas o software, solicitar aprobación.
+
+- No eliminar archivos, dependencias, configuraciones o código sin autorización explícita.
+
+- Cuando una herramienta proponga realizar cambios automáticamente, analizar primero el cambio y solicitar autorización antes de aplicarlo.
+
+## 8. Autorización de cambios
+
+- Toda tarea que implique modificar código, configuración, arquitectura, dependencias o infraestructura requiere autorización humana cuando el cambio no haya sido previamente aprobado.
+
+- Analizar primero y modificar después.
+
+- Una autorización para una modificación específica no implica autorización para realizar modificaciones adicionales no relacionadas.
+
+- No interpretar expresiones ambiguas como autorización para realizar cambios importantes.
+
+- Si una tarea requiere una decisión no definida en `/docs_ia/contexto`, detener la implementación y presentar la decisión que debe tomarse.
+
+## 9. Comunicación
+
+- Explicar las decisiones de forma breve y técnica.
+
+- Si falta información en `/docs_ia/contexto`, indicarlo explícitamente.
+
+- Diferenciar siempre entre:
+  - información definida
+  - suposición
+  - propuesta
+  - decisión aprobada
+
+- Cuando existan varias alternativas técnicamente válidas, presentarlas antes de elegir una.
+
+- No presentar una propuesta como si fuera una decisión aprobada.
+
+- Informar qué archivos serán modificados antes de realizar cambios importantes.
+
+- Después de realizar cambios autorizados, informar:
+  - archivos modificados
+  - cambios realizados
+  - comandos ejecutados
+  - pruebas realizadas
+  - resultado de las pruebas
+  - posibles problemas pendientes
+
+## 10. Trazabilidad del uso de IA
+
+- Toda interacción relevante de Cline debe quedar registrada, incluso cuando la tarea sea únicamente de análisis y no se realicen cambios en el código.
+
+- La trazabilidad debe registrarse desde el momento en que se ejecuta el prompt y no requiere autorización para crear el registro histórico.
+
+- Los registros deben almacenarse en:
+  `/docs_ia/prompts`
+
+- Cada interacción relevante debe generar un archivo Markdown independiente.
+
+- Utilizar identificadores consecutivos:
+  `P-001`, `P-002`, `P-003`, etc.
+
+- El archivo debe contener como mínimo:
+
+  - Identificador del prompt
+  - Fecha
+  - Objetivo
+  - Prompt completo utilizado
+  - Archivos de contexto consultados
+  - Archivos del proyecto analizados
+  - Resumen de la respuesta generada
+  - Propuestas realizadas por la IA
+  - Decisiones pendientes
+  - Estado
+
+- Los estados permitidos son:
+  - `ANALISIS`
+  - `PROPUESTA`
+  - `APROBADO`
+  - `RECHAZADO`
+  - `IMPLEMENTADO`
+
+- Si la interacción produce una propuesta arquitectónica o técnica, crear también el documento correspondiente en:
+  `/docs_ia/decisiones`
+
+- Una decisión propuesta debe permanecer en estado `PROPUESTA` hasta recibir autorización humana.
+
+- La creación del registro de trazabilidad y de una propuesta documental no constituye autorización para modificar código, configuración, dependencias o infraestructura.
+
+- Ningún archivo del proyecto, excepto los archivos de trazabilidad y propuestas documentales correspondientes, puede modificarse sin autorización humana explícita.
+
+- Si el usuario solicita únicamente análisis, el análisis debe ejecutarse y documentarse inmediatamente, sin realizar cambios en el código.
+
+- Si posteriormente el usuario autoriza una propuesta, actualizar el registro correspondiente con:
+  - autorización recibida
+  - cambios realizados
+  - archivos modificados
+  - comandos ejecutados
+  - pruebas realizadas
+  - resultado
+  - estado final
+
+- Nunca sobrescribir registros históricos.
+
+- Si una interacción modifica una propuesta existente, conservar el registro anterior y crear una nueva versión o nuevo registro relacionado.
+
+- La trazabilidad debe permitir reconstruir:
+
+  Contexto → Prompt → Respuesta IA → Propuesta → Autorización humana → Implementación → Pruebas → Resultado.
