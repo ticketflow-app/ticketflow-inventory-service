@@ -106,6 +106,42 @@ Basada únicamente en el contexto definido:
 
 ## Estado
 
-PROPUESTA
+APROBADA — IMPLEMENTADA (ver "Implementación").
 
-> Pendiente de aprobación humana. No implementar hasta contar con la aprobación explícita. Si se aprueba, esta decisión complementa (no reemplaza) a ADR-003, ADR-004 y ADR-007.
+> Aprobación: instrucción humana explícita del 2026-10-13 ("implementa el DA-001"). Complementa (no reemplaza) a ADR-003, ADR-004 y ADR-007. Trazabilidad: `P-013`.
+
+## Implementación
+
+Implementada el 2026-10-13. El flujo del §10.4 (reserva con `DECRBY`) **no existía** en el código (`CreateReservationService` solo persistía y publicaba; `RedisAvailabilityAdapter` solo leía), por lo que se implementó como prerequisito de la recuperación.
+
+Componentes:
+
+### 1. Flujo de reserva Redis-primero (§10.4) — `CreateReservationService`
+- `DECRBY` atómico por `(eventId, locality)`; si el contador queda < 0 se restaura con `INCRBY` y se rechaza con `InsufficientAvailabilityException` → HTTP **409**.
+- Si hay disponibilidad, se persiste la reserva en PostgreSQL y se publica el evento.
+
+### 2. Compensación ante fallo de persistencia (CU-06 FA-03)
+- Fallo al persistir: `INCRBY` (`release`, con Resilience4j `inventoryRetry`, 3 intentos) y se lanza `ReservationPersistenceException` → HTTP **503**.
+- Si la compensación también falla, la inconsistencia queda acotada y registrada (venta perdida, nunca sobreventa).
+
+### 3. Registro durable de incidentes
+- Tabla `reservation_incidents` (migración `V2`), entidad/puerto/adaptador. Razones: `PERSISTENCE_FAILURE_COMPENSATED`, `COMPENSATION_FAILED`, `EVENT_PUBLISH_FAILURE`, `RECONCILIATION_REPAIR`.
+
+### 4. Reconciliación periódica
+- `ReconcileAvailabilityService` recomputa `availability = capacity − Σ CONFIRMED` (PostgreSQL + capacidad como fuentes de verdad) y repara Redis, registrando el incidente.
+- `AvailabilityReconciliationJob` (`@Scheduled`, valores por defecto `initial-delay-ms=60000`, `fixed-delay-ms=300000`). **Decisión de implementación:** el intervalo (5 min) no está definido en el contexto; se parametriza vía `inventory.reconciliation.*`.
+
+### 5. Capacidad de localidad (HU-11) — prerequisito de la reconciliación
+- Tabla `locality_capacity` (migración `V3`) + endpoint `PUT /events/{eventId}/localities/{locality}/capacity`, que registra la capacidad y reinicializa el contador en Redis (`capacity − Σ CONFIRMED`).
+- **Decisión de implementación:** el endpoint no existía; se agrega porque la reconciliación y las pruebas de concurrencia (disponibilidad = 100) requieren una fuente de capacidad. La arquitectura prevé que Catálogo inicialice los contadores (REST síncrono); hoy no existe Catálogo.
+
+### Clave de disponibilidad
+- Se mantiene la clave ya usada por el servicio: `inventory:availability:{eventId}:{locality}`.
+
+### Fuera de alcance
+- **Idempotencia** de `POST /reservations` (§15): concern separado, no implementado en esta decisión.
+- **Exposición del endpoint de capacidad por el gateway**: requiere una ruta nueva en `ticketflow-api-gateway` (autorización aparte).
+
+### Pruebas
+- Unitarias (JUnit 5 + Mockito + AssertJ, sin Spring/BD): `CreateReservationServiceTest` (6) y `ReconcileAvailabilityServiceTest` (3); `ServiceApplicationTests` sigue verde. `.\mvnw.cmd test` → **10/10**.
+- Pendiente (estrategia de pruebas): integración con Testcontainers (PostgreSQL/Redis/Kafka reales) y la prueba de concurrencia (disponibilidad 100 → sin sobreventa).
