@@ -72,8 +72,37 @@ Adoptar la Alternativa A: incorporar Resilience4j mediante `io.github.resilience
 - `docs_ia/contexto/arquitectura/arquitectura_mircroservicio_inventario.rm` §8: sustitución de `resilience4j-spring-boot3` por `resilience4j-spring-boot4:2.4.0` (cambio documental pendiente de autorización; **no realizado**).
 - Sin impacto sobre las decisiones aprobadas (ADR-001 a ADR-007 del contexto y DA-001).
 
+---
+
+## Revisión 2026-10-14 — Nueva recomendación: retirar Resilience4j del proyecto
+
+> Revisión solicitada por la orden humana de resolución de hallazgos T-004 (Fase 1). **Modifica la recomendación original** de este documento (que era incorporar `resilience4j-spring-boot4:2.4.0`). El contenido histórico se conserva sin sobrescribir; la decisión permanece en `PROPUESTA` hasta la aprobación explícita.
+
+### Evidencia nueva (verificada el 2026-10-14)
+
+1. `pom.xml` contiene `resilience4j-spring-boot4:2.4.0` **y** `resilience4j-reactor:2.4.0`, pese a que esta decisión nunca recibió aprobación formal (contradicción ya registrada en T-004 §4.1).
+2. **Sin uso real en el código:** búsqueda en `src/` → cero anotaciones `@Retry`, `@Retryable` o `@CircuitBreaker`; la única `@Retry` previa (en `getAvailability`) fue retirada durante T-004.
+3. Único vestigio: dos propiedades huérfanas en `application.properties` (`resilience4j.retry.instances.inventoryRetry.*`).
+4. Gobernanza: principio de mínima dependencia (`.clinerules` §6). La resiliencia crítica de la reserva ya es nativa (script Lua atómico en Redis, T-004), no depende de reintentos.
+
+### Nueva alternativa recomendada — Retiro completo con resiliencia nativa
+
+- **Retirar** `resilience4j-spring-boot4` y `resilience4j-reactor` del `pom.xml`.
+- **Reintento nativo de Reactor** donde se requiera (p. ej. `getAvailability`): `Retry.backoff(...)` / `retryWhen` dentro del adaptador; sin dependencias externas; resiliencia en infraestructura (hexagonal).
+- **Limpieza asociada (requiere autorización explícita):** eliminar las propiedades `resilience4j.*` de `application.properties`.
+
+### Contradicción detectada en la orden de ejecución y su resolución propuesta
+
+La orden pide simultáneamente "remover `resilience4j-spring-boot4`" y "reincorporar `@Retry`/`@Retryable`". Son incompatibles si `@Retry` se entiende como la anotación de Resilience4j (la librería a retirar). **Recomendación:** retiro de la dependencia + reintento nativo de Reactor en `getAvailability` (misma semántica de reintento, cero dependencias). Alternativa registrada: conservar Resilience4j y restaurar `@Retry(name = "inventoryRetry")` — solo válida si la anotación fuera requisito; el contexto no la exige y la verificación en código confirma que no se usa ninguna anotación de la librería.
+
+### Impacto
+
+- `pom.xml`: retirar 2 dependencias (§6: requiere autorización humana explícita).
+- `application.properties`: retirar 2 líneas `resilience4j.*` (requiere autorización).
+- `RedisAvailabilityAdapter.getAvailability`: reintento nativo de Reactor (infraestructura; sin tocar dominio ni contratos).
+
 ## Estado
 
-PROPUESTA
+APROBADA (2026-10-14)
 
-> Pendiente de aprobación humana. No se ha modificado `pom.xml` ni ningún archivo de contexto existente. Solo tras la aprobación explícita esta decisión pasará a APROBADA y se ejecutarán los cambios correspondientes (edición de `pom.xml` y actualización documental del contexto).
+> Aprobación humana explícita el 2026-10-14 (registro P-013). La recomendación aprobada es la de la **revisión 2026-10-14**: retirar `resilience4j-spring-boot4` y `resilience4j-reactor` del `pom.xml`, limpiar las propiedades `resilience4j.*` de `application.properties` y aplicar reintento nativo de Reactor (`Retry.backoff`, equivalente a los 3 intentos/500 ms de la configuración huérfana) en `RedisAvailabilityAdapter.getAvailability`. Se autorizó la modificación de `pom.xml` y `application.properties` para este fin.

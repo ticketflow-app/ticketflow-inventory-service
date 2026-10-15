@@ -104,8 +104,36 @@ Basada únicamente en el contexto definido:
 - La periodicidad de la reconciliación define el tiempo máximo de corrección de una inconsistencia no compensada; su valor deberá definirse y justificarse en la implementación (valor no definido en el contexto).
 - En la ruta de fallo, el cliente recibe un error transitorio; la idempotencia (§15) evita reservas duplicadas ante reintentos del cliente.
 
+---
+
+## Revisión 2026-10-14 — Patrón operativo para `CreateReservationService` (Saga corta / compensación manual)
+
+> Revisión solicitada por la orden humana de resolución de hallazgos T-004 (Fase 1). Refina la Alternativa A ya recomendada con el patrón operativo concreto. El contenido histórico de este documento se conserva sin sobrescribir; la decisión permanece en `PROPUESTA` hasta la aprobación explícita.
+
+### Patrón propuesto: Saga corta con compensación manual
+
+Flujo de `CreateReservationService.createReservation` (semántica de "try-catch" con acción compensatoria; en WebFlux se expresa con `flatMap`/`onErrorResume`, no con `try-catch` literal):
+
+1. **Decremento atómico previo en Redis:** `tryReserve(eventId, sectionId, quantity)` (ya implementado y verificado en T-004).
+   - `NOT_INITIALIZED` o `INSUFFICIENT_AVAILABILITY` → rechazar la reserva **sin persistir** y sin publicar eventos (el contador no se tocó).
+   - `RESERVED` → continuar.
+2. **Persistencia en PostgreSQL** (`reservationRepository.save`) con manejo de error explícito en el flujo reactivo.
+3. **Acción compensatoria:** si la persistencia falla, ejecutar de inmediato `release(eventId, sectionId, quantity)` sobre Redis (incremento acotado a la capacidad máxima, ya implementado en T-004) y propagar un error controlado al cliente. Registrar el incidente (CU-06 FA-03).
+4. **Publicación del evento** (`reservationEventPublisher.publish`) únicamente tras persistencia exitosa.
+
+### Garantías y límites
+
+- RB-11 (no sobreventa) se mantiene: cualquier fallo deriva en venta perdida, nunca en sobreventa.
+- La ventana de inconsistencia Redis↔PostgreSQL queda acotada a `save` + `release` compensatorio.
+- **Límite conocido:** si la compensación fallara a su vez (Redis caído), la disponibilidad queda subestimada hasta la reconciliación de la Alternativa A; `release` no es idempotente por identificador de reserva (T-004 §Observaciones). Persistencia de incidentes y reconciliación periódica siguen formando parte de la decisión completa.
+
+### Impacto de la revisión
+
+- `CreateReservationService`: orquestación `tryReserve → save (con compensación) → publish` (capa de aplicación; requiere autorización).
+- Prueba obligatoria (Fase 4 del orden de ejecución): fallo simulado de PostgreSQL tras `tryReserve` exitoso ⇒ verificar que `release` restaura el stock en Redis.
+
 ## Estado
 
-PROPUESTA
+APROBADA (2026-10-14)
 
-> Pendiente de aprobación humana. No implementar hasta contar con la aprobación explícita. Si se aprueba, esta decisión complementa (no reemplaza) a ADR-003, ADR-004 y ADR-007.
+> Aprobación humana explícita el 2026-10-14 (registro P-013), incluyendo la revisión "Saga corta / compensación manual" para `CreateReservationService` y la autorización para modificar ese archivo. Esta decisión complementa (no reemplaza) a ADR-003, ADR-004 y ADR-007. El registro durable de incidentes y la reconciliación periódica de la Alternativa A completa siguen como trabajo futuro; la implementación autorizada registra el incidente mediante log estructurado de error.
