@@ -137,3 +137,16 @@ Flujo de `CreateReservationService.createReservation` (semántica de "try-catch"
 APROBADA (2026-10-14)
 
 > Aprobación humana explícita el 2026-10-14 (registro P-013), incluyendo la revisión "Saga corta / compensación manual" para `CreateReservationService` y la autorización para modificar ese archivo. Esta decisión complementa (no reemplaza) a ADR-003, ADR-004 y ADR-007. El registro durable de incidentes y la reconciliación periódica de la Alternativa A completa siguen como trabajo futuro; la implementación autorizada registra el incidente mediante log estructurado de error.
+
+---
+
+### Confirmación de implementación Fase 3 (2026-10-25)
+
+La decisión DA-001 ha sido implementada completamente en la Fase 3:
+
+- `CreateReservationService.createReservation` orquesta el flujo `tryReserve` (Redis) → `save` (PostgreSQL vía R2DBC) → `publish` (Kafka), con compensación `release` (Redis) ante fallo de persistencia, sin operaciones bloqueantes.
+- `ReservationPersistenceAdapter` implementa `ReservationRepository` usando `DatabaseClient` (Spring Data R2DBC), sin JDBC, sin JPA, sin Hibernate.
+- Migración Flyway `V1__create_reservations_table.sql` crea la tabla `reservations` con `id`, `event_id`, `section_id`, `quantity`, `status`, `created_at` e índices sobre `(event_id, section_id)` y `status`.
+- Pruebas unitarias (`CreateReservationServiceTest`) y de integración (`CreateReservationServiceCompensationIT` con Redis real, `CreateReservationServicePostgresIT` con PostgreSQL real) validan el flujo feliz, la compensación y el rechazo por falta de stock.
+
+El flujo implementado coincide exactamente con el patrón aprobado: Redis primero (decremento atómico), PostgreSQL segundo (persistencia), compensación en Redis ante fallo de persistencia, rechazo sin efectos secundarios cuando Redis devuelve `INSUFFICIENT_AVAILABILITY` o `NOT_INITIALIZED`.

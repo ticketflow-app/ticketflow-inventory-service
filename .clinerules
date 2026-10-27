@@ -19,8 +19,10 @@ Todos los agentes deben cumplir las reglas generales de este documento.
 
 **Permisos:**
 - Lectura: todo el proyecto.
-- Escritura: propuestas arquitectónicas en `docs_ia/decisiones/`.
+- Escritura: exclusivamente propuestas arquitectónicas `DA-XXX` en `docs_ia/decisiones/`, con estado `PROPUESTA`.
 - Actualización de `docs_ia/contexto/`: únicamente después de recibir autorización humana explícita para los archivos correspondientes.
+- No puede crear ni modificar archivos fuera de las rutas autorizadas anteriormente.
+- No puede crear tareas, registros de prompts, reportes, logs, archivos temporales ni otros artefactos auxiliares.
 
 **Restricciones:**
 - No modifica código fuente, pruebas, dependencias ni configuraciones de implementación.
@@ -178,6 +180,16 @@ Si un archivo no corresponde a su función, el agente debe limitarse a leerlo, a
 - Las nuevas tareas deben presentarse como propuestas y requieren autorización antes de convertirse en tareas autorizadas para ejecución.
 - Cada agente debe respetar la responsabilidad asignada para actualizar los archivos compartidos.
 - Nadie puede modificar archivos fuera de su alcance alegando que lo necesita para completar una tarea.
+
+### Restricción de rutas de escritura
+
+Cada agente solo puede crear o modificar archivos en las rutas expresamente autorizadas para su rol y la tarea activa.
+
+La autorización de escritura comprende tanto el tipo de archivo como su ubicación. El permiso para crear un artefacto no autoriza a guardarlo en otra ruta.
+
+Está prohibido crear archivos temporales, logs, TXT, scripts auxiliares o archivos de diagnóstico en la raíz del repositorio o en cualquier otra ubicación no autorizada.
+
+Si el entregable requiere escribir en una ruta no permitida para el rol, el agente debe detener la escritura y solicitar autorización, sin improvisar otra ubicación ni crear artefactos alternativos.
 
 ---
 

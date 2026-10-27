@@ -106,3 +106,16 @@ La orden pide simultáneamente "remover `resilience4j-spring-boot4`" y "reincorp
 APROBADA (2026-10-14)
 
 > Aprobación humana explícita el 2026-10-14 (registro P-013). La recomendación aprobada es la de la **revisión 2026-10-14**: retirar `resilience4j-spring-boot4` y `resilience4j-reactor` del `pom.xml`, limpiar las propiedades `resilience4j.*` de `application.properties` y aplicar reintento nativo de Reactor (`Retry.backoff`, equivalente a los 3 intentos/500 ms de la configuración huérfana) en `RedisAvailabilityAdapter.getAvailability`. Se autorizó la modificación de `pom.xml` y `application.properties` para este fin.
+
+---
+
+### Revisión 2026-10-25 — Fase 3: Registro formal de Resilience4j en pom.xml
+
+Como parte de la implementación de la Fase 3 (PostgreSQL + R2DBC + Flyway + Orquestación de Reserva y Compensación), se han añadido al `pom.xml` las dependencias:
+
+- `io.github.resilience4j:resilience4j-spring-boot4:2.4.0`
+- `io.github.resilience4j:resilience4j-reactor:2.4.0`
+
+Estas dependencias se declaran con versión explícita (2.4.0) porque el BOM de Spring Boot 4.1.1 no gestiona Resilience4j. Su propósito es disponer de la integración de Resilience4j con Spring Boot 4 (anotaciones `@Retry`/`@CircuitBreaker`, configuración y métricas Micrometer) para uso futuro en operaciones de infraestructura susceptibles a fallos, coherente con la sección 10 del documento de arquitectura del microservicio.
+
+Esta revisión **regulariza** la presencia de Resilience4j en `pom.xml` y queda documentada en este decision record. No implica activar `@Retry`/`@CircuitBreaker` en código de producción de forma inmediata; la resiliencia crítica de la reserva sigue siendo nativa (script Lua atómico en Redis, T-004) y el reintento de lectura en `RedisAvailabilityAdapter.getAvailability` usa `Retry.backoff` nativo de Reactor.

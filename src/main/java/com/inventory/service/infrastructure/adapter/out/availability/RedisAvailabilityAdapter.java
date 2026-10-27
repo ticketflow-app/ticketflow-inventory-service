@@ -6,6 +6,9 @@ import com.inventory.service.application.port.out.ReleaseOutcome;
 import com.inventory.service.application.port.out.ReservationOutcome;
 import com.inventory.service.domain.model.Availability;
 import com.inventory.service.domain.model.LocalityAvailability;
+import io.github.resilience4j.circuitbreaker.CircuitBreaker;
+import io.github.resilience4j.circuitbreaker.CircuitBreakerRegistry;
+import io.github.resilience4j.reactor.circuitbreaker.operator.CircuitBreakerOperator;
 import org.springframework.data.redis.core.ReactiveStringRedisTemplate;
 import org.springframework.data.redis.core.script.DefaultRedisScript;
 import org.springframework.stereotype.Repository;
@@ -55,9 +58,16 @@ public class RedisAvailabilityAdapter implements AvailabilityRepository {
           + "return \"1\"";
 
     private final ReactiveStringRedisTemplate redisTemplate;
+    private final CircuitBreaker initializeCircuitBreaker;
+    private final CircuitBreaker tryReserveCircuitBreaker;
+    private final CircuitBreaker releaseCircuitBreaker;
 
-    public RedisAvailabilityAdapter(ReactiveStringRedisTemplate redisTemplate) {
+    public RedisAvailabilityAdapter(ReactiveStringRedisTemplate redisTemplate,
+                                    CircuitBreakerRegistry circuitBreakerRegistry) {
         this.redisTemplate = redisTemplate;
+        this.initializeCircuitBreaker = circuitBreakerRegistry.circuitBreaker("redisAdapter");
+        this.tryReserveCircuitBreaker = circuitBreakerRegistry.circuitBreaker("redisAdapter");
+        this.releaseCircuitBreaker = circuitBreakerRegistry.circuitBreaker("redisAdapter");
     }
 
     @Override
@@ -71,7 +81,8 @@ public class RedisAvailabilityAdapter implements AvailabilityRepository {
         return runScript(INITIALIZE_SCRIPT,
                         List.of(availabilityKey(eventId, sectionId), capacityKey(eventId, sectionId)),
                         capacity)
-                .map(r -> "1".equals(r) ? InitializeOutcome.INITIALIZED : InitializeOutcome.ALREADY_INITIALIZED);
+                .map(r -> "1".equals(r) ? InitializeOutcome.INITIALIZED : InitializeOutcome.ALREADY_INITIALIZED)
+                .transformDeferred(CircuitBreakerOperator.of(initializeCircuitBreaker));
     }
 
     @Override
@@ -83,7 +94,8 @@ public class RedisAvailabilityAdapter implements AvailabilityRepository {
             return Mono.error(new IllegalArgumentException("quantity must be > 0"));
         }
         return runScript(TRY_RESERVE_SCRIPT, List.of(availabilityKey(eventId, sectionId)), quantity)
-                .map(this::toReservationOutcome);
+                .map(this::toReservationOutcome)
+                .transformDeferred(CircuitBreakerOperator.of(tryReserveCircuitBreaker));
     }
 
     @Override
@@ -97,7 +109,8 @@ public class RedisAvailabilityAdapter implements AvailabilityRepository {
         return runScript(RELEASE_SCRIPT,
                         List.of(availabilityKey(eventId, sectionId), capacityKey(eventId, sectionId)),
                         quantity)
-                .map(r -> "1".equals(r) ? ReleaseOutcome.RELEASED : ReleaseOutcome.NOT_INITIALIZED);
+                .map(r -> "1".equals(r) ? ReleaseOutcome.RELEASED : ReleaseOutcome.NOT_INITIALIZED)
+                .transformDeferred(CircuitBreakerOperator.of(releaseCircuitBreaker));
     }
 
     @Override
@@ -106,12 +119,14 @@ public class RedisAvailabilityAdapter implements AvailabilityRepository {
         Mono<LocalityAvailability> general = readSection(eventId, "General");
         return Mono.zip(vip, general)
                 .map(r -> new Availability(eventId, List.of(r.getT1(), r.getT2())))
+                .timeout(Duration.ofSeconds(2))
                 .retryWhen(READ_RETRY);
     }
 
     private Mono<LocalityAvailability> readSection(Long eventId, String section) {
         return redisTemplate.opsForValue()
                 .get(availabilityKey(eventId, section))
+                .timeout(Duration.ofSeconds(2))
                 .map(v -> new LocalityAvailability(section, Integer.valueOf(v)))
                 .defaultIfEmpty(new LocalityAvailability(section, 0));
     }
@@ -120,7 +135,9 @@ public class RedisAvailabilityAdapter implements AvailabilityRepository {
         DefaultRedisScript<String> script = new DefaultRedisScript<>();
         script.setScriptText(lua);
         script.setResultType(String.class);
-        return redisTemplate.execute(script, keys, String.valueOf(numberArg)).next();
+        return redisTemplate.execute(script, keys, String.valueOf(numberArg))
+                .next()
+                .timeout(Duration.ofSeconds(2));
     }
 
     private ReservationOutcome toReservationOutcome(String result) {

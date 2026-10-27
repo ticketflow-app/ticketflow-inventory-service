@@ -64,10 +64,10 @@ class CreateReservationServiceCompensationIT {
         if (keys != null) {
             keys.forEach(key -> template.delete(key).block());
         }
-        adapter = new RedisAvailabilityAdapter(template);
+        adapter = new RedisAvailabilityAdapter(template, io.github.resilience4j.circuitbreaker.CircuitBreakerRegistry.ofDefaults());
         reservationRepository = new FailingReservationRepository();
         eventPublisher = new RecordingEventPublisher();
-        service = new CreateReservationService(reservationRepository, eventPublisher, adapter);
+        service = new CreateReservationService(reservationRepository, eventPublisher, e -> Mono.empty(), adapter, new io.micrometer.core.instrument.simple.SimpleMeterRegistry());
     }
 
     private Integer readAvailability() {

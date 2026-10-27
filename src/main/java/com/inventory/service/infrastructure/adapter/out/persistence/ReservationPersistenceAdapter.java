@@ -2,50 +2,46 @@ package com.inventory.service.infrastructure.adapter.out.persistence;
 
 import com.inventory.service.application.port.out.ReservationRepository;
 import com.inventory.service.domain.model.Reservation;
-import io.r2dbc.spi.ConnectionFactory;
+import org.springframework.r2dbc.core.DatabaseClient;
 import org.springframework.stereotype.Repository;
 import reactor.core.publisher.Mono;
 
+import java.time.Duration;
+import java.time.Instant;
+
+/**
+ * Persistence adapter for reservations using Spring Data R2DBC {@link DatabaseClient}.
+ * Fully reactive: no JDBC, no JPA, no Hibernate, no blocking I/O.
+ */
 @Repository
 public class ReservationPersistenceAdapter implements ReservationRepository {
 
-    private final ConnectionFactory connectionFactory;
+    private final DatabaseClient databaseClient;
 
-    public ReservationPersistenceAdapter(ConnectionFactory connectionFactory) {
-        this.connectionFactory = connectionFactory;
+    public ReservationPersistenceAdapter(DatabaseClient databaseClient) {
+        this.databaseClient = databaseClient;
     }
 
     @Override
     public Mono<Reservation> save(Reservation reservation) {
-
-        return Mono.from(connectionFactory.create())
-                .flatMap(connection ->
-                        Mono.from(connection.createStatement(
-                                        """
-                                        INSERT INTO reservations
-                                        (event_id, locality, quantity, status)
-                                        VALUES ($1, $2, $3, $4)
-                                        RETURNING id
-                                        """)
-                                .bind("$1", reservation.getEventId())
-                                .bind("$2", reservation.getLocality())
-                                .bind("$3", reservation.getQuantity())
-                                .bind("$4", reservation.getStatus())
-                                .execute())
-                                .flatMap(result ->
-                                        Mono.from(result.map((row, metadata) ->
-                                                row.get("id", Long.class)
-                                        ))
-                                )
-                                .map(id -> new Reservation(
-                                        id,
-                                        reservation.getEventId(),
-                                        reservation.getLocality(),
-                                        reservation.getQuantity(),
-                                        reservation.getStatus()
-                                ))
-                                .doFinally(signal ->
-                                        Mono.from(connection.close()).subscribe())
-                );
+        return databaseClient.sql("""
+                INSERT INTO reservations (event_id, section_id, quantity, status, created_at)
+                VALUES ($1, $2, $3, $4, $5)
+                RETURNING id, event_id, section_id, quantity, status, created_at
+                """)
+                .bind("$1", reservation.getEventId())
+                .bind("$2", reservation.getLocality())
+                .bind("$3", reservation.getQuantity())
+                .bind("$4", reservation.getStatus())
+                .bind("$5", Instant.now())
+                .map((row, metadata) -> new Reservation(
+                        row.get("id", Long.class),
+                        row.get("event_id", Long.class),
+                        row.get("section_id", String.class),
+                        row.get("quantity", Integer.class),
+                        row.get("status", String.class)
+                ))
+                .first()
+                .timeout(Duration.ofSeconds(5));
     }
 }

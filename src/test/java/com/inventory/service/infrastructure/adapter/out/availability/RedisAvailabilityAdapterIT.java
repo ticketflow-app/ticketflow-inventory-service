@@ -52,7 +52,7 @@ class RedisAvailabilityAdapterIT {
         connectionFactory = new LettuceConnectionFactory(REDIS.getHost(), REDIS.getMappedPort(6379));
         connectionFactory.afterPropertiesSet();
         template = new ReactiveStringRedisTemplate(connectionFactory);
-        adapter = new RedisAvailabilityAdapter(template);
+        adapter = new RedisAvailabilityAdapter(template, io.github.resilience4j.circuitbreaker.CircuitBreakerRegistry.ofDefaults());
     }
 
     @AfterAll
