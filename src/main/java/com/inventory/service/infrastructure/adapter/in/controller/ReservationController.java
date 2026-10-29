@@ -17,7 +17,7 @@ import reactor.core.publisher.Mono;
  * Reactive REST controller for reservation operations.
  * Exposes endpoints under /api/v1/events.
  */
-@RestController
+// @RestController (disabled: legacy /api/v1 routes)
 public class ReservationController {
 
     private final CreateReservationUseCase createReservationUseCase;
@@ -47,12 +47,14 @@ public class ReservationController {
         return createReservationUseCase
                 .createReservation(domainReservation)
                 .map(saved -> new ReservationResponse(
-                        saved.getId(),
-                        saved.getEventId(),
-                        saved.getLocality(),
-                        saved.getQuantity(),
-                        saved.getStatus(),
-                        java.time.Instant.now()
-                ));
+        saved.getId(),
+        null,
+        saved.getEventId(),
+        saved.getLocality(),
+        saved.getQuantity(),
+        saved.getStatus(),
+        null,
+        null
+));
     }
 }

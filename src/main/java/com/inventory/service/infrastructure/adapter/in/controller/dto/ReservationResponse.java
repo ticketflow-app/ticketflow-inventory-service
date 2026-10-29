@@ -2,14 +2,13 @@ package com.inventory.service.infrastructure.adapter.in.controller.dto;
 
 import java.time.Instant;
 
-/**
- * Response DTO for a created reservation.
- */
 public record ReservationResponse(
-    Long reservationId,
+    Long id,
+    String userId,
     Long eventId,
     String sectionId,
     Integer quantity,
     String status,
-    Instant createdAt
+    Long remainingSeconds,
+    Instant expiresAt
 ) {}

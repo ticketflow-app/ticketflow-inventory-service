@@ -114,7 +114,20 @@ public class RedisAvailabilityAdapter implements AvailabilityRepository {
     }
 
     @Override
+    public Mono<Void> adjust(String localityId, Integer newQuantity) {
+        if (localityId == null || localityId.isBlank() || newQuantity == null || newQuantity < 0) {
+            return Mono.error(new IllegalArgumentException("localityId and non-negative newQuantity must be provided"));
+        }
+        String key = KEY_PREFIX + localityId;
+        String capKey = key + CAPACITY_SUFFIX;
+        return redisTemplate.opsForValue().set(key, String.valueOf(newQuantity))
+                .then(redisTemplate.opsForValue().set(capKey, String.valueOf(newQuantity)))
+                .then();
+    }
+
+    @Override
     public Mono<Availability> getAvailability(Long eventId) {
+
         Mono<LocalityAvailability> vip = readSection(eventId, "VIP");
         Mono<LocalityAvailability> general = readSection(eventId, "General");
         return Mono.zip(vip, general)

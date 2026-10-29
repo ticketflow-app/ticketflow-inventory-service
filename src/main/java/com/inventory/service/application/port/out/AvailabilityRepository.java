@@ -36,4 +36,6 @@ public interface AvailabilityRepository {
      * @return a {@link ReleaseOutcome} describing the result
      */
     Mono<ReleaseOutcome> release(Long eventId, String sectionId, Integer quantity);
+
+    Mono<Void> adjust(String localityId, Integer newQuantity);
 }

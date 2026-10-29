@@ -1,7 +1,14 @@
 package com.inventory.service.infrastructure.adapter.in.controller.exception;
 
+import com.inventory.service.domain.exception.AccessDeniedException;
+import com.inventory.service.domain.exception.EventNotSellableException;
 import com.inventory.service.domain.exception.InsufficientAvailabilityException;
+import com.inventory.service.domain.exception.InvalidReservationStateTransitionException;
+import com.inventory.service.domain.exception.InsufficientStockException;
 import com.inventory.service.domain.exception.NotInitializedException;
+import com.inventory.service.domain.exception.ReservationExpiredException;
+import com.inventory.service.domain.exception.ResourceNotFoundException;
+import com.inventory.service.domain.exception.TooManyRequestsException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ProblemDetail;
 import org.springframework.http.ResponseEntity;
@@ -83,6 +90,76 @@ public class GlobalExceptionHandler {
                 HttpStatus.BAD_REQUEST, ex.getMessage());
         problemDetail.setTitle("Invalid Argument");
         problemDetail.setProperty("errorCode", "INVALID_ARGUMENT");
+        return Mono.just(ResponseEntity.of(problemDetail).build());
+    }
+
+    @ExceptionHandler(ResourceNotFoundException.class)
+    public Mono<ResponseEntity<ProblemDetail>> handleResourceNotFound(
+            ResourceNotFoundException ex) {
+        ProblemDetail problemDetail = ProblemDetail.forStatusAndDetail(
+                HttpStatus.NOT_FOUND, ex.getMessage());
+        problemDetail.setTitle("Resource Not Found");
+        problemDetail.setProperty("errorCode", "RESOURCE_NOT_FOUND");
+        return Mono.just(ResponseEntity.of(problemDetail).build());
+    }
+
+    @ExceptionHandler(AccessDeniedException.class)
+    public Mono<ResponseEntity<ProblemDetail>> handleAccessDenied(
+            AccessDeniedException ex) {
+        ProblemDetail problemDetail = ProblemDetail.forStatusAndDetail(
+                HttpStatus.FORBIDDEN, ex.getMessage());
+        problemDetail.setTitle("Access Denied");
+        problemDetail.setProperty("errorCode", "ACCESS_DENIED");
+        return Mono.just(ResponseEntity.of(problemDetail).build());
+    }
+
+    @ExceptionHandler(InsufficientStockException.class)
+    public Mono<ResponseEntity<ProblemDetail>> handleInsufficientStock(
+            InsufficientStockException ex) {
+        ProblemDetail problemDetail = ProblemDetail.forStatusAndDetail(
+                HttpStatus.CONFLICT, ex.getMessage());
+        problemDetail.setTitle("Insufficient Stock");
+        problemDetail.setProperty("errorCode", "STOCK_INSUFFICIENT");
+        return Mono.just(ResponseEntity.of(problemDetail).build());
+    }
+
+    @ExceptionHandler(EventNotSellableException.class)
+    public Mono<ResponseEntity<ProblemDetail>> handleEventNotSellable(
+            EventNotSellableException ex) {
+        ProblemDetail problemDetail = ProblemDetail.forStatusAndDetail(
+                HttpStatus.CONFLICT, ex.getMessage());
+        problemDetail.setTitle("Event Not Sellable");
+        problemDetail.setProperty("errorCode", "EVENTO_NO_VENDIBLE");
+        return Mono.just(ResponseEntity.of(problemDetail).build());
+    }
+
+    @ExceptionHandler(ReservationExpiredException.class)
+    public Mono<ResponseEntity<ProblemDetail>> handleReservationExpired(
+            ReservationExpiredException ex) {
+        ProblemDetail problemDetail = ProblemDetail.forStatusAndDetail(
+                HttpStatus.GONE, ex.getMessage());
+        problemDetail.setTitle("Reservation Expired");
+        problemDetail.setProperty("errorCode", "RESERVA_EXPIRADA");
+        return Mono.just(ResponseEntity.of(problemDetail).build());
+    }
+
+    @ExceptionHandler(TooManyRequestsException.class)
+    public Mono<ResponseEntity<ProblemDetail>> handleTooManyRequests(
+            TooManyRequestsException ex) {
+        ProblemDetail problemDetail = ProblemDetail.forStatusAndDetail(
+                HttpStatus.TOO_MANY_REQUESTS, ex.getMessage());
+        problemDetail.setTitle("Too Many Requests");
+        problemDetail.setProperty("errorCode", "TOO_MANY_REQUESTS");
+        return Mono.just(ResponseEntity.of(problemDetail).build());
+    }
+
+    @ExceptionHandler(InvalidReservationStateTransitionException.class)
+    public Mono<ResponseEntity<ProblemDetail>> handleInvalidTransition(
+            InvalidReservationStateTransitionException ex) {
+        ProblemDetail problemDetail = ProblemDetail.forStatusAndDetail(
+                HttpStatus.CONFLICT, ex.getMessage());
+        problemDetail.setTitle("Invalid Reservation State Transition");
+        problemDetail.setProperty("errorCode", "INVALID_STATE");
         return Mono.just(ResponseEntity.of(problemDetail).build());
     }
 

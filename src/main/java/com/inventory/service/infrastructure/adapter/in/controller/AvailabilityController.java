@@ -12,7 +12,7 @@ import reactor.core.publisher.Mono;
  * Reactive REST controller for availability queries.
  * Exposes endpoints under /api/v1/events.
  */
-@RestController
+// @RestController (disabled: legacy /api/v1 routes)
 public class AvailabilityController {
 
     private final GetAvailabilityUseCase getAvailabilityUseCase;

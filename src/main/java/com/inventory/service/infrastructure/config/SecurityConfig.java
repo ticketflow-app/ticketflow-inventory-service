@@ -4,6 +4,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
+import org.springframework.security.config.annotation.method.configuration.EnableReactiveMethodSecurity;
 import org.springframework.security.config.web.server.ServerHttpSecurity;
 import org.springframework.security.oauth2.jwt.NimbusReactiveJwtDecoder;
 import org.springframework.security.oauth2.jwt.ReactiveJwtDecoder;
@@ -29,6 +30,7 @@ import javax.crypto.spec.SecretKeySpec;
  *
  * CSRF and CORS are disabled for this stateless API.
  */
+@EnableReactiveMethodSecurity
 @Configuration
 public class SecurityConfig {
 
@@ -46,7 +48,7 @@ public class SecurityConfig {
 
                         // 2. Consulta de disponibilidad (pública con/sin sección)
                         .pathMatchers(HttpMethod.GET, "/api/v1/events/{eventId}/sections/{sectionId}/availability").permitAll()
-                        .pathMatchers(HttpMethod.GET, "/api/v1/events/{eventId}/availability").permitAll()
+                        .pathMatchers(HttpMethod.GET, "/api/inventario/eventos/*/disponibilidad").permitAll()
 
                         // 3. Creación de reservas (requiere Token JWT)
                         .pathMatchers(HttpMethod.POST, "/api/v1/events/{eventId}/sections/{sectionId}/reservations").authenticated()
