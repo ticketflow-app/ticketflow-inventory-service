@@ -30,17 +30,17 @@ public class AvailabilityController {
      */
     @GetMapping("/api/v1/events/{eventId}/sections/{sectionId}/availability")
     public Mono<AvailabilityResponse> getAvailability(
-            @PathVariable Long eventId,
+            @PathVariable String eventId,
             @PathVariable String sectionId) {
 
         return getAvailabilityUseCase
                 .getAvailability(eventId)
                 .flatMap(availability -> availability.getLocalities().stream()
-                        .filter(locality -> sectionId.equalsIgnoreCase(locality.getLocality()))
+                        .filter(locality -> sectionId.equalsIgnoreCase(locality.getLocalityId()))
                         .findFirst()
                         .map(locality -> Mono.just(new AvailabilityResponse(
                                 availability.getEventId(),
-                                locality.getLocality(),
+                                locality.getLocalityId(),
                                 locality.getAvailableTickets()
                         )))
                         .orElseGet(() -> Mono.error(

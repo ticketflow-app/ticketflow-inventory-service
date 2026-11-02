@@ -37,7 +37,7 @@ public class ReservationController {
     @PostMapping("/api/v1/events/{eventId}/sections/{sectionId}/reservations")
     @ResponseStatus(HttpStatus.CREATED)
     public Mono<ReservationResponse> createReservation(
-            @PathVariable Long eventId,
+            @PathVariable String eventId,
             @PathVariable String sectionId,
             @Valid @RequestBody ReservationRequest request) {
 
@@ -50,7 +50,7 @@ public class ReservationController {
         saved.getId(),
         null,
         saved.getEventId(),
-        saved.getLocality(),
+        saved.getLocalityId(),
         saved.getQuantity(),
         saved.getStatus(),
         null,

@@ -4,8 +4,6 @@ import com.inventory.service.application.port.out.AvailabilityRepository;
 import com.inventory.service.application.port.out.InitializeOutcome;
 import com.inventory.service.application.port.out.ReleaseOutcome;
 import com.inventory.service.application.port.out.ReservationOutcome;
-import com.inventory.service.domain.model.Availability;
-import com.inventory.service.domain.model.LocalityAvailability;
 import io.github.resilience4j.circuitbreaker.CircuitBreaker;
 import io.github.resilience4j.circuitbreaker.CircuitBreakerRegistry;
 import io.github.resilience4j.reactor.circuitbreaker.operator.CircuitBreakerOperator;
@@ -21,11 +19,14 @@ import java.util.List;
 /**
  * Reactive Redis adapter that manages ticket availability with atomic Lua operations,
  * preventing overselling and negative availability under concurrency (RB-08/RB-11).
+ *
+ * <p>Keys follow the convention {@code inv:stock:{eventId}:{localityId}}: both the event
+ * and the locality are UUIDs owned by the catalog service (docx §1.4).
  */
 @Repository
 public class RedisAvailabilityAdapter implements AvailabilityRepository {
 
-    private static final String KEY_PREFIX = "availability:";
+    private static final String KEY_PREFIX = "inv:stock:";
     private static final String CAPACITY_SUFFIX = ":capacity";
 
     /**
@@ -71,77 +72,76 @@ public class RedisAvailabilityAdapter implements AvailabilityRepository {
     }
 
     @Override
-    public Mono<InitializeOutcome> initialize(Long eventId, String sectionId, Integer capacity) {
-        if (eventId == null || sectionId == null || sectionId.isBlank()) {
-            return Mono.error(new IllegalArgumentException("eventId and sectionId must be provided"));
+    public Mono<Integer> readAvailability(String eventId, String localityId) {
+        if (isBlank(eventId) || isBlank(localityId)) {
+            return Mono.error(new IllegalArgumentException("eventId and localityId must be provided"));
+        }
+        return redisTemplate.opsForValue()
+                .get(availabilityKey(eventId, localityId))
+                .timeout(Duration.ofSeconds(2))
+                .map(Integer::valueOf)
+                .defaultIfEmpty(0)
+                .retryWhen(READ_RETRY);
+    }
+
+    @Override
+    public Mono<InitializeOutcome> initialize(String eventId, String localityId, Integer capacity) {
+        if (isBlank(eventId) || isBlank(localityId)) {
+            return Mono.error(new IllegalArgumentException("eventId and localityId must be provided"));
         }
         if (capacity == null || capacity < 0) {
             return Mono.error(new IllegalArgumentException("capacity must be >= 0"));
         }
         return runScript(INITIALIZE_SCRIPT,
-                        List.of(availabilityKey(eventId, sectionId), capacityKey(eventId, sectionId)),
+                        List.of(availabilityKey(eventId, localityId), capacityKey(eventId, localityId)),
                         capacity)
                 .map(r -> "1".equals(r) ? InitializeOutcome.INITIALIZED : InitializeOutcome.ALREADY_INITIALIZED)
                 .transformDeferred(CircuitBreakerOperator.of(initializeCircuitBreaker));
     }
 
     @Override
-    public Mono<ReservationOutcome> tryReserve(Long eventId, String sectionId, Integer quantity) {
-        if (eventId == null || sectionId == null || sectionId.isBlank()) {
-            return Mono.error(new IllegalArgumentException("eventId and sectionId must be provided"));
+    public Mono<ReservationOutcome> tryReserve(String eventId, String localityId, Integer quantity) {
+        if (isBlank(eventId) || isBlank(localityId)) {
+            return Mono.error(new IllegalArgumentException("eventId and localityId must be provided"));
         }
         if (quantity == null || quantity <= 0) {
             return Mono.error(new IllegalArgumentException("quantity must be > 0"));
         }
-        return runScript(TRY_RESERVE_SCRIPT, List.of(availabilityKey(eventId, sectionId)), quantity)
+        return runScript(TRY_RESERVE_SCRIPT, List.of(availabilityKey(eventId, localityId)), quantity)
                 .map(this::toReservationOutcome)
                 .transformDeferred(CircuitBreakerOperator.of(tryReserveCircuitBreaker));
     }
 
     @Override
-    public Mono<ReleaseOutcome> release(Long eventId, String sectionId, Integer quantity) {
-        if (eventId == null || sectionId == null || sectionId.isBlank()) {
-            return Mono.error(new IllegalArgumentException("eventId and sectionId must be provided"));
+    public Mono<ReleaseOutcome> release(String eventId, String localityId, Integer quantity) {
+        if (isBlank(eventId) || isBlank(localityId)) {
+            return Mono.error(new IllegalArgumentException("eventId and localityId must be provided"));
         }
         if (quantity == null || quantity <= 0) {
             return Mono.error(new IllegalArgumentException("quantity must be > 0"));
         }
         return runScript(RELEASE_SCRIPT,
-                        List.of(availabilityKey(eventId, sectionId), capacityKey(eventId, sectionId)),
+                        List.of(availabilityKey(eventId, localityId), capacityKey(eventId, localityId)),
                         quantity)
                 .map(r -> "1".equals(r) ? ReleaseOutcome.RELEASED : ReleaseOutcome.NOT_INITIALIZED)
                 .transformDeferred(CircuitBreakerOperator.of(releaseCircuitBreaker));
     }
 
     @Override
-    public Mono<Void> adjust(String localityId, Integer newQuantity) {
-        if (localityId == null || localityId.isBlank() || newQuantity == null || newQuantity < 0) {
-            return Mono.error(new IllegalArgumentException("localityId and non-negative newQuantity must be provided"));
+    public Mono<Void> adjust(String eventId, String localityId, Integer newQuantity) {
+        if (isBlank(eventId) || isBlank(localityId) || newQuantity == null || newQuantity < 0) {
+            return Mono.error(new IllegalArgumentException(
+                    "eventId, localityId and non-negative newQuantity must be provided"));
         }
-        String key = KEY_PREFIX + localityId;
-        String capKey = key + CAPACITY_SUFFIX;
+        String key = availabilityKey(eventId, localityId);
+        String capKey = capacityKey(eventId, localityId);
         return redisTemplate.opsForValue().set(key, String.valueOf(newQuantity))
                 .then(redisTemplate.opsForValue().set(capKey, String.valueOf(newQuantity)))
                 .then();
     }
 
-    @Override
-    public Mono<Availability> getAvailability(Long eventId) {
-
-        Mono<LocalityAvailability> vip = readSection(eventId, "VIP");
-        Mono<LocalityAvailability> general = readSection(eventId, "General");
-        return Mono.zip(vip, general)
-                .map(r -> new Availability(eventId, List.of(r.getT1(), r.getT2())))
-                .timeout(Duration.ofSeconds(2))
-                .retryWhen(READ_RETRY);
-    }
-
-    private Mono<LocalityAvailability> readSection(Long eventId, String section) {
-        return redisTemplate.opsForValue()
-                .get(availabilityKey(eventId, section))
-                .timeout(Duration.ofSeconds(2))
-                .map(v -> new LocalityAvailability(section, Integer.valueOf(v)))
-                .defaultIfEmpty(new LocalityAvailability(section, 0));
+    private boolean isBlank(String value) {
+        return value == null || value.isBlank();
     }
 
     private Mono<String> runScript(String lua, List<String> keys, Integer numberArg) {
@@ -161,11 +161,11 @@ public class RedisAvailabilityAdapter implements AvailabilityRepository {
         };
     }
 
-    private String availabilityKey(Long eventId, String sectionId) {
-        return KEY_PREFIX + eventId + ":" + sectionId;
+    private String availabilityKey(String eventId, String localityId) {
+        return KEY_PREFIX + eventId + ":" + localityId;
     }
 
-    private String capacityKey(Long eventId, String sectionId) {
-        return KEY_PREFIX + eventId + ":" + sectionId + CAPACITY_SUFFIX;
+    private String capacityKey(String eventId, String localityId) {
+        return availabilityKey(eventId, localityId) + CAPACITY_SUFFIX;
     }
 }

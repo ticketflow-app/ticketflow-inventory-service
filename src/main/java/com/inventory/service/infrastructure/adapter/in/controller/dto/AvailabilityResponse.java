@@ -1,10 +1,10 @@
 package com.inventory.service.infrastructure.adapter.in.controller.dto;
 
 /**
- * Response DTO for availability of a single event section.
+ * Response DTO for availability of a single event locality (legacy /api/v1 contract).
  */
 public record AvailabilityResponse(
-    Long eventId,
-    String sectionId,
+    String eventId,
+    String localityId,
     Integer availableCapacity
 ) {}

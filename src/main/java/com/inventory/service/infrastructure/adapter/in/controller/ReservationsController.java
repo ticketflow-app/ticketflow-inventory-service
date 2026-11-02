@@ -21,6 +21,9 @@ import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 import reactor.core.publisher.Mono;
 
+import java.util.List;
+import java.util.Map;
+
 @RestController
 @RequestMapping("/api/reservas")
 public class ReservationsController {
@@ -42,6 +45,20 @@ public class ReservationsController {
         return reservationService.create(userId, idempotencyKey, request);
     }
 
+    /** Current user reservations, matching the frontend contract ({@code {reservations: [...]}}). */
+    /** Any authenticated user can see their own reservations (filtered by user_id in DB).
+     *  This aligns with the request to allow admin/organizador to view their history. */
+    @GetMapping
+    @PreAuthorize("isAuthenticated()")
+    public Mono<Map<String, List<ReservationResponse>>> list(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size,
+            @AuthenticationPrincipal Jwt jwt) {
+        String userId = jwt != null ? jwt.getSubject() : null;
+        return reservationService.list(userId, page, size)
+                .map(result -> Map.of("reservations", result.getContent()));
+    }
+
     @GetMapping("/{id}")
     @PreAuthorize("hasRole('COMPRADOR')")
     public Mono<ReservationResponse> get(@PathVariable Long id,
@@ -51,8 +68,8 @@ public class ReservationsController {
     }
 
     @GetMapping("/mias")
-    @PreAuthorize("hasRole('COMPRADOR')")
-    public Mono<Page<ReservationResponse>> list(
+    @PreAuthorize("isAuthenticated()")
+    public Mono<Page<ReservationResponse>> listPage(
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size,
             @AuthenticationPrincipal Jwt jwt) {

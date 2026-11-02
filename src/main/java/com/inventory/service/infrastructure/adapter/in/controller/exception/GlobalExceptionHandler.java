@@ -1,6 +1,6 @@
 package com.inventory.service.infrastructure.adapter.in.controller.exception;
 
-import com.inventory.service.domain.exception.AccessDeniedException;
+import com.inventory.service.domain.exception.CatalogUnavailableException;
 import com.inventory.service.domain.exception.EventNotSellableException;
 import com.inventory.service.domain.exception.InsufficientAvailabilityException;
 import com.inventory.service.domain.exception.InvalidReservationStateTransitionException;
@@ -19,6 +19,7 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.server.ResponseStatusException;
 import org.springframework.web.server.ServerWebInputException;
 import org.springframework.web.bind.support.WebExchangeBindException;
+import org.springframework.security.access.AccessDeniedException;
 import reactor.core.publisher.Mono;
 
 import java.util.List;
@@ -103,16 +104,6 @@ public class GlobalExceptionHandler {
         return Mono.just(ResponseEntity.of(problemDetail).build());
     }
 
-    @ExceptionHandler(AccessDeniedException.class)
-    public Mono<ResponseEntity<ProblemDetail>> handleAccessDenied(
-            AccessDeniedException ex) {
-        ProblemDetail problemDetail = ProblemDetail.forStatusAndDetail(
-                HttpStatus.FORBIDDEN, ex.getMessage());
-        problemDetail.setTitle("Access Denied");
-        problemDetail.setProperty("errorCode", "ACCESS_DENIED");
-        return Mono.just(ResponseEntity.of(problemDetail).build());
-    }
-
     @ExceptionHandler(InsufficientStockException.class)
     public Mono<ResponseEntity<ProblemDetail>> handleInsufficientStock(
             InsufficientStockException ex) {
@@ -150,6 +141,26 @@ public class GlobalExceptionHandler {
                 HttpStatus.TOO_MANY_REQUESTS, ex.getMessage());
         problemDetail.setTitle("Too Many Requests");
         problemDetail.setProperty("errorCode", "TOO_MANY_REQUESTS");
+        return Mono.just(ResponseEntity.of(problemDetail).build());
+    }
+
+    @ExceptionHandler(CatalogUnavailableException.class)
+    public Mono<ResponseEntity<ProblemDetail>> handleCatalogUnavailable(
+            CatalogUnavailableException ex) {
+        ProblemDetail problemDetail = ProblemDetail.forStatusAndDetail(
+                HttpStatus.SERVICE_UNAVAILABLE, ex.getMessage());
+        problemDetail.setTitle("Catalog Service Unavailable");
+        problemDetail.setProperty("errorCode", "CATALOG_UNAVAILABLE");
+        return Mono.just(ResponseEntity.of(problemDetail).build());
+    }
+
+    @ExceptionHandler(org.springframework.security.access.AccessDeniedException.class)
+    public Mono<ResponseEntity<ProblemDetail>> handleSpringSecurityAccessDenied(
+            org.springframework.security.access.AccessDeniedException ex) {
+        ProblemDetail problemDetail = ProblemDetail.forStatusAndDetail(
+                HttpStatus.FORBIDDEN, "No tienes permisos para acceder a este recurso");
+        problemDetail.setTitle("Access Denied");
+        problemDetail.setProperty("errorCode", "ACCESS_DENIED");
         return Mono.just(ResponseEntity.of(problemDetail).build());
     }
 

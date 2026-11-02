@@ -55,7 +55,7 @@ public class TicketService {
                 ticket.getReservationId(),
                 ticket.getUserId(),
                 ticket.getEventId(),
-                ticket.getSectionId(),
+                ticket.getLocalityId(),
                 ticket.getSeatNumber(),
                 ticket.getIssuedAt());
     }

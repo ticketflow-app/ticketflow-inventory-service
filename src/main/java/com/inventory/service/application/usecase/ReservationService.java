@@ -30,7 +30,7 @@ public class ReservationService {
     private final ReservationRepository reservationRepository;
     private final TicketRepository ticketRepository;
 
-    private final Map<Long, String> ownerByReservation = new ConcurrentHashMap<>();
+    // Ownership is persisted on the reservation row (user_id).
     private final Map<Long, Instant> expiryByReservation = new ConcurrentHashMap<>();
     private final Map<String, Long> idempotencyToReservation = new ConcurrentHashMap<>();
 
@@ -52,11 +52,11 @@ public class ReservationService {
                     .map(reservation -> toResponse(reservation, userId));
         }
 
-        return availabilityRepository.tryReserve(request.eventId(), request.sectionId(), request.quantity())
+        return availabilityRepository.tryReserve(request.eventId(), request.localityId(), request.quantity())
                 .flatMap(outcome -> {
                     if (outcome == ReservationOutcome.INSUFFICIENT_AVAILABILITY) {
                         return Mono.error(new InsufficientStockException(
-                                "Insufficient stock for eventId=" + request.eventId() + " sectionId=" + request.sectionId()));
+                                "Insufficient stock for eventId=" + request.eventId() + " sectionId=" + request.localityId()));
                     }
                     if (outcome == ReservationOutcome.NOT_INITIALIZED) {
                         return Mono.error(new EventNotSellableException(
@@ -65,11 +65,10 @@ public class ReservationService {
                     Instant now = Instant.now();
                     Instant expiresAt = now.plusSeconds(600);
                     Reservation reservation = new Reservation(
-                            null, request.eventId(), request.sectionId(), request.quantity(), Reservation.STATUS_PENDING);
+                            null, userId, request.eventId(), request.localityId(), request.quantity(), Reservation.STATUS_PENDING);
                     return reservationRepository.save(reservation)
                             .doOnNext(saved -> {
                                 if (saved.getId() != null) {
-                                    ownerByReservation.put(saved.getId(), userId);
                                     expiryByReservation.put(saved.getId(), expiresAt);
                                     idempotencyToReservation.put(idempotencyKey, saved.getId());
                                 }
@@ -78,7 +77,7 @@ public class ReservationService {
                                     saved.getId(),
                                     userId,
                                     saved.getEventId(),
-                                    saved.getLocality(),
+                                    saved.getLocalityId(),
                                     saved.getQuantity(),
                                     saved.getStatus(),
                                     600L,
@@ -90,7 +89,7 @@ public class ReservationService {
         return reservationRepository.findById(id)
                 .switchIfEmpty(Mono.error(new ResourceNotFoundException("Reservation not found: " + id)))
                 .flatMap(reservation -> {
-                    String owner = ownerByReservation.get(id);
+                    String owner = reservation.getUserId();
                     if (owner != null && !owner.equals(userId)) {
                         return Mono.error(new AccessDeniedException("Access denied to reservation: " + id));
                     }
@@ -103,7 +102,7 @@ public class ReservationService {
                             reservation.getId(),
                             userId,
                             reservation.getEventId(),
-                            reservation.getLocality(),
+                            reservation.getLocalityId(),
                             reservation.getQuantity(),
                             reservation.getStatus(),
                             remaining,
@@ -133,7 +132,7 @@ public class ReservationService {
         return reservationRepository.findById(id)
                 .switchIfEmpty(Mono.error(new ResourceNotFoundException("Reservation not found: " + id)))
                 .flatMap(reservation -> {
-                    String owner = ownerByReservation.get(id);
+                    String owner = reservation.getUserId();
                     if (owner != null && !owner.equals(userId)) {
                         return Mono.error(new AccessDeniedException("Access denied to reservation: " + id));
                     }
@@ -155,14 +154,14 @@ public class ReservationService {
                                                 saved.getId(),
                                                 userId,
                                                 saved.getEventId(),
-                                                saved.getLocality(),
+                                                saved.getLocalityId(),
                                                 "A" + i,
                                                 Instant.now())))
                                         .then(Mono.just(new ReservationResponse(
                                                 saved.getId(),
                                                 userId,
                                                 saved.getEventId(),
-                                                saved.getLocality(),
+                                                saved.getLocalityId(),
                                                 saved.getQuantity(),
                                                 saved.getStatus(),
                                                 0L,
@@ -175,7 +174,7 @@ public class ReservationService {
         return reservationRepository.findById(id)
                 .switchIfEmpty(Mono.error(new ResourceNotFoundException("Reservation not found: " + id)))
                 .flatMap(reservation -> {
-                    String owner = ownerByReservation.get(id);
+                    String owner = reservation.getUserId();
                     if (owner != null && !owner.equals(userId)) {
                         return Mono.error(new AccessDeniedException("Access denied to reservation: " + id));
                     }
@@ -183,13 +182,14 @@ public class ReservationService {
                         return Mono.error(new InvalidReservationStateTransitionException(
                                 "Only a pending reservation can be cancelled"));
                     }
-                    return availabilityRepository.release(reservation.getEventId(), reservation.getLocality(), reservation.getQuantity())
+                    return availabilityRepository.release(reservation.getEventId(), reservation.getLocalityId(), reservation.getQuantity())
                             .then(reservationRepository.save(reservation.cancel()))
                             .then();
                 });
     }
 
     private ReservationResponse toResponse(Reservation reservation, String userId) {
+        String ownerId = reservation.getUserId() != null ? reservation.getUserId() : userId;
         Instant expiresAt = expiryByReservation.get(reservation.getId());
         long remaining = 0L;
         if (expiresAt != null) {
@@ -197,9 +197,9 @@ public class ReservationService {
         }
         return new ReservationResponse(
                 reservation.getId(),
-                userId,
+                ownerId,
                 reservation.getEventId(),
-                reservation.getLocality(),
+                reservation.getLocalityId(),
                 reservation.getQuantity(),
                 reservation.getStatus(),
                 remaining,

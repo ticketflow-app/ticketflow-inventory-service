@@ -61,21 +61,21 @@ public class KafkaEventPublisherAdapter implements EventPublisherPort {
                     .transformDeferred(TimeLimiterOperator.of(timeLimiter))
                     .doOnNext(result -> log.info(
                             "ReservationConfirmedEvent published [topic={}, partition={}, offset={}] " +
-                                    "reservationId={}, eventId={}, sectionId={}, quantity={}, correlationId={}",
+                                    "reservationId={}, eventId={}, localityId={}, quantity={}, correlationId={}",
                             result.recordMetadata().topic(),
                             result.recordMetadata().partition(),
                             result.recordMetadata().offset(),
                             event.reservationId(),
                             event.eventId(),
-                            event.sectionId(),
+                            event.localityId(),
                             event.quantity(),
                             event.correlationId()))
                     .doOnError(throwable -> log.error(
-                            "Failed to publish ReservationConfirmedEvent [reservationId={}, eventId={}, sectionId={}, " +
+                            "Failed to publish ReservationConfirmedEvent [reservationId={}, eventId={}, localityId={}, " +
                                     "quantity={}, correlationId={}]. Error: {}",
                             event.reservationId(),
                             event.eventId(),
-                            event.sectionId(),
+                            event.localityId(),
                             event.quantity(),
                             event.correlationId(),
                             throwable.getMessage(),

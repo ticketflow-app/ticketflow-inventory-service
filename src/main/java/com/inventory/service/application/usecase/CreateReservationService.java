@@ -69,7 +69,7 @@ public class CreateReservationService implements CreateReservationUseCase {
     public Mono<Reservation> createReservation(Reservation reservation) {
         Timer.Sample sample = Timer.start();
         return availabilityRepository
-                .tryReserve(reservation.getEventId(), reservation.getLocality(), reservation.getQuantity())
+                .tryReserve(reservation.getEventId(), reservation.getLocalityId(), reservation.getQuantity())
                 .timeout(Duration.ofSeconds(3))
                 .flatMap(outcome -> {
                     if (outcome != ReservationOutcome.RESERVED) {
@@ -91,7 +91,7 @@ public class CreateReservationService implements CreateReservationUseCase {
                 .doOnSuccess(saved -> {
                     Counter.builder("reservations.created.total")
                             .tag("eventId", saved.getEventId().toString())
-                            .tag("sectionId", saved.getLocality())
+                            .tag("localityId", saved.getLocalityId())
                             .tag("status", saved.getStatus())
                             .register(meterRegistry)
                             .increment();
@@ -108,7 +108,7 @@ public class CreateReservationService implements CreateReservationUseCase {
         ReservationConfirmedEvent event = new ReservationConfirmedEvent(
                 savedReservation.getId() != null ? savedReservation.getId().toString() : null,
                 savedReservation.getEventId(),
-                savedReservation.getLocality(),
+                savedReservation.getLocalityId(),
                 savedReservation.getQuantity(),
                 Instant.now(),
                 "corr-" + (savedReservation.getId() != null ? savedReservation.getId() : "unknown")
@@ -139,18 +139,18 @@ public class CreateReservationService implements CreateReservationUseCase {
     private Mono<Void> compensate(Reservation reservation, Throwable persistenceFailure) {
         log.error("Reservation persistence failed (eventId={}, locality={}, quantity={}); "
                         + "compensating Redis availability. Cause: {}",
-                reservation.getEventId(), reservation.getLocality(), reservation.getQuantity(),
+                reservation.getEventId(), reservation.getLocalityId(), reservation.getQuantity(),
                 persistenceFailure.toString());
         return availabilityRepository
-                .release(reservation.getEventId(), reservation.getLocality(), reservation.getQuantity())
+                .release(reservation.getEventId(), reservation.getLocalityId(), reservation.getQuantity())
                 .timeout(Duration.ofSeconds(3))
                 .doOnNext(outcome -> log.info(
                         "Compensation completed with outcome {} for eventId={}, locality={}, quantity={}",
-                        outcome, reservation.getEventId(), reservation.getLocality(), reservation.getQuantity()))
+                        outcome, reservation.getEventId(), reservation.getLocalityId(), reservation.getQuantity()))
                 .doOnError(compensationFailure -> log.error(
                         "Compensation FAILED for eventId={}, locality={}, quantity={}. "
                                 + "Manual reconciliation required. Cause: {}",
-                        reservation.getEventId(), reservation.getLocality(), reservation.getQuantity(),
+                        reservation.getEventId(), reservation.getLocalityId(), reservation.getQuantity(),
                         compensationFailure.toString()))
                 .onErrorResume(compensationFailure -> Mono.empty())
                 .then();
@@ -159,9 +159,9 @@ public class CreateReservationService implements CreateReservationUseCase {
     private RuntimeException rejection(ReservationOutcome outcome, Reservation reservation) {
         String message = switch (outcome) {
             case INSUFFICIENT_AVAILABILITY -> "Insufficient availability for eventId=%s locality=%s quantity=%s"
-                    .formatted(reservation.getEventId(), reservation.getLocality(), reservation.getQuantity());
+                    .formatted(reservation.getEventId(), reservation.getLocalityId(), reservation.getQuantity());
             case NOT_INITIALIZED -> "Availability not initialized for eventId=%s locality=%s"
-                    .formatted(reservation.getEventId(), reservation.getLocality());
+                    .formatted(reservation.getEventId(), reservation.getLocalityId());
             default -> "Reservation rejected with outcome %s".formatted(outcome);
         };
         return switch (outcome) {

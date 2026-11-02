@@ -4,15 +4,15 @@ import java.util.List;
 
 public class Availability {
 
-    private Long eventId;
-    private List<LocalityAvailability> localities;
+    private final String eventId;
+    private final List<LocalityAvailability> localities;
 
-    public Availability(Long eventId, List<LocalityAvailability> localities) {
+    public Availability(String eventId, List<LocalityAvailability> localities) {
         this.eventId = eventId;
         this.localities = localities;
     }
 
-    public Long getEventId() {
+    public String getEventId() {
         return eventId;
     }
 

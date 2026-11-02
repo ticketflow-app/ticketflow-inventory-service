@@ -8,8 +8,8 @@ import java.time.Instant;
  */
 public record ReservationConfirmedEvent(
     String reservationId,
-    Long eventId,
-    String sectionId,
+    String eventId,
+    String localityId,
     Integer quantity,
     Instant timestamp,
     String correlationId

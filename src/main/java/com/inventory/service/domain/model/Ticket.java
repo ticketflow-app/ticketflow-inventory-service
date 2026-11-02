@@ -10,18 +10,18 @@ public class Ticket {
     private final Long id;
     private final Long reservationId;
     private final String userId;
-    private final Long eventId;
-    private final String sectionId;
+    private final String eventId;
+    private final String localityId;
     private final String seatNumber;
     private final Instant issuedAt;
 
-    public Ticket(Long id, Long reservationId, String userId, Long eventId,
-                  String sectionId, String seatNumber, Instant issuedAt) {
+    public Ticket(Long id, Long reservationId, String userId, String eventId,
+                  String localityId, String seatNumber, Instant issuedAt) {
         this.id = id;
         this.reservationId = reservationId;
         this.userId = userId;
         this.eventId = eventId;
-        this.sectionId = sectionId;
+        this.localityId = localityId;
         this.seatNumber = seatNumber;
         this.issuedAt = issuedAt;
     }
@@ -38,12 +38,12 @@ public class Ticket {
         return userId;
     }
 
-    public Long getEventId() {
+    public String getEventId() {
         return eventId;
     }
 
-    public String getSectionId() {
-        return sectionId;
+    public String getLocalityId() {
+        return localityId;
     }
 
     public String getSeatNumber() {

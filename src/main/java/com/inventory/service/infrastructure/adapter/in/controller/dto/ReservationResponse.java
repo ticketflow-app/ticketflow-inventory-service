@@ -5,8 +5,8 @@ import java.time.Instant;
 public record ReservationResponse(
     Long id,
     String userId,
-    Long eventId,
-    String sectionId,
+    String eventId,
+    String localityId,
     Integer quantity,
     String status,
     Long remainingSeconds,

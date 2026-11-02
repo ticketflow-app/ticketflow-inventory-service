@@ -23,7 +23,7 @@ public class InMemoryTicketRepository implements TicketRepository {
                 ticket.getReservationId(),
                 ticket.getUserId(),
                 ticket.getEventId(),
-                ticket.getSectionId(),
+                ticket.getLocalityId(),
                 ticket.getSeatNumber(),
                 ticket.getIssuedAt());
         store.put(id, saved);

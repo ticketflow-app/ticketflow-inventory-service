@@ -30,15 +30,16 @@ public class InventoryController {
     }
 
     @GetMapping("/eventos/{eventoId}/disponibilidad")
-    public Mono<EventAvailabilityResponse> getAvailability(@PathVariable Long eventoId) {
+    public Mono<EventAvailabilityResponse> getAvailability(@PathVariable String eventoId) {
         return getEventAvailabilityService.getAvailability(eventoId);
     }
 
-    @PostMapping("/localidades/{id}/ajuste")
+    @PostMapping("/eventos/{eventoId}/localidades/{localidadId}/ajuste")
     @PreAuthorize("hasRole('ADMIN')")
     @ResponseStatus(HttpStatus.OK)
-    public Mono<Void> adjust(@PathVariable String id,
-                            @Valid @RequestBody StockAdjustmentRequest request) {
-        return adjustStockService.adjust(id, request.newAvailableQuantity());
+    public Mono<Void> adjust(@PathVariable String eventoId,
+                             @PathVariable String localidadId,
+                             @Valid @RequestBody StockAdjustmentRequest request) {
+        return adjustStockService.adjust(eventoId, localidadId, request.newAvailableQuantity());
     }
 }

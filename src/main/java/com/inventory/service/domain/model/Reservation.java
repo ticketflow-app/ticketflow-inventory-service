@@ -10,15 +10,17 @@ public class Reservation {
     public static final String STATUS_CANCELLED = "CANCELLED";
 
     private final Long id;
-    private final Long eventId;
-    private final String locality;
+    private final String userId;
+    private final String eventId;
+    private final String localityId;
     private final Integer quantity;
     private final String status;
 
     public Reservation(
             Long id,
-            Long eventId,
-            String locality,
+            String userId,
+            String eventId,
+            String localityId,
             Integer quantity,
             String status) {
         if (quantity == null || quantity <= 0) {
@@ -26,22 +28,32 @@ public class Reservation {
                     "Reservation quantity must be greater than zero");
         }
         this.id = id;
+        this.userId = userId;
         this.eventId = eventId;
-        this.locality = locality;
+        this.localityId = localityId;
         this.quantity = quantity;
         this.status = status;
+    }
+
+    /** Backwards-compatible constructor for flows that do not track the owner. */
+    public Reservation(Long id, String eventId, String localityId, Integer quantity, String status) {
+        this(id, null, eventId, localityId, quantity, status);
     }
 
     public Long getId() {
         return id;
     }
 
-    public Long getEventId() {
+    public String getUserId() {
+        return userId;
+    }
+
+    public String getEventId() {
         return eventId;
     }
 
-    public String getLocality() {
-        return locality;
+    public String getLocalityId() {
+        return localityId;
     }
 
     public Integer getQuantity() {
@@ -63,7 +75,8 @@ public class Reservation {
             throw new InvalidReservationStateTransitionException(
                     "Only a pending reservation can be confirmed");
         }
-        return new Reservation(this.id, this.eventId, this.locality, this.quantity, STATUS_CONFIRMED);
+        return new Reservation(this.id, this.userId, this.eventId, this.localityId,
+                this.quantity, STATUS_CONFIRMED);
     }
 
     /**
@@ -77,6 +90,7 @@ public class Reservation {
             throw new InvalidReservationStateTransitionException(
                     "Only a pending reservation can be cancelled");
         }
-        return new Reservation(this.id, this.eventId, this.locality, this.quantity, STATUS_CANCELLED);
+        return new Reservation(this.id, this.userId, this.eventId, this.localityId,
+                this.quantity, STATUS_CANCELLED);
     }
 }

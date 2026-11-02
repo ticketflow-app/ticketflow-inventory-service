@@ -6,8 +6,8 @@ public record TicketResponse(
     Long id,
     Long reservationId,
     String userId,
-    Long eventId,
-    String sectionId,
+    String eventId,
+    String localityId,
     String seatNumber,
     Instant issuedAt
 ) {}

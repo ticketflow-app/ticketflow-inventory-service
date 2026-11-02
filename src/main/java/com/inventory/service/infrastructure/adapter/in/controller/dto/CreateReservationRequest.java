@@ -6,11 +6,11 @@ import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 
 public record CreateReservationRequest(
-    @NotNull(message = "eventId is required")
-    Long eventId,
+    @NotBlank(message = "eventId is required")
+    String eventId,
 
-    @NotBlank(message = "sectionId is required")
-    String sectionId,
+    @NotBlank(message = "localityId is required")
+    String localityId,
 
     @NotNull(message = "quantity is required")
     @Min(value = 1, message = "quantity must be greater than zero")

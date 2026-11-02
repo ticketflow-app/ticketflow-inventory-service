@@ -13,7 +13,7 @@ public class AdjustStockService {
         this.availabilityRepository = availabilityRepository;
     }
 
-    public Mono<Void> adjust(String localityId, Integer newQuantity) {
-        return availabilityRepository.adjust(localityId, newQuantity);
+    public Mono<Void> adjust(String eventId, String localityId, Integer newQuantity) {
+        return availabilityRepository.adjust(eventId, localityId, newQuantity);
     }
 }
