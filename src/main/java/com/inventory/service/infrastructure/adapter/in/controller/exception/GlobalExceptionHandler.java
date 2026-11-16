@@ -154,6 +154,31 @@ public class GlobalExceptionHandler {
         return Mono.just(ResponseEntity.of(problemDetail).build());
     }
 
+
+    @ExceptionHandler(com.inventory.service.domain.exception.AccessDeniedException.class)
+    public Mono<ResponseEntity<ProblemDetail>> handleDomainAccessDenied(
+            com.inventory.service.domain.exception.AccessDeniedException ex) {
+        ProblemDetail problemDetail = ProblemDetail.forStatusAndDetail(
+                HttpStatus.FORBIDDEN, ex.getMessage());
+        problemDetail.setTitle("Access Denied");
+        problemDetail.setProperty("errorCode", "ACCESS_DENIED");
+        return Mono.just(ResponseEntity.of(problemDetail).build());
+    }
+
+        return Mono.just(ResponseEntity.of(problemDetail).build());
+    }
+
+    @ExceptionHandler(InvalidReservationStateTransitionException.class)
+    public Mono<ResponseEntity<ProblemDetail>> handleInvalidTransition(
+            InvalidReservationStateTransitionException ex) {
+        ProblemDetail problemDetail = ProblemDetail.forStatusAndDetail(
+                HttpStatus.CONFLICT, ex.getMessage());
+        problemDetail.setTitle("Invalid Reservation State Transition");
+        problemDetail.setProperty("errorCode", "INVALID_STATE");
+        return Mono.just(ResponseEntity.of(problemDetail).build());
+    }</new_text>
+<old_text>    @ExceptionHandler(org.springframework.security.access.AccessDeniedException.class)
+    @ExceptionHandler(org.springframework.security.access.AccessDeniedException.class)
     @ExceptionHandler(org.springframework.security.access.AccessDeniedException.class)
     public Mono<ResponseEntity<ProblemDetail>> handleSpringSecurityAccessDenied(
             org.springframework.security.access.AccessDeniedException ex) {
