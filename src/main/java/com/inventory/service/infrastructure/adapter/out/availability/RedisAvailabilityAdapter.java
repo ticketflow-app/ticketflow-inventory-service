@@ -162,10 +162,10 @@ public class RedisAvailabilityAdapter implements AvailabilityRepository {
     }
 
     private String availabilityKey(String eventId, String localityId) {
-        return KEY_PREFIX + eventId + ":" + localityId;
+        return InventoryRedisKeys.stockKey(eventId, localityId);
     }
 
     private String capacityKey(String eventId, String localityId) {
-        return availabilityKey(eventId, localityId) + CAPACITY_SUFFIX;
+        return InventoryRedisKeys.capacityKey(eventId, localityId);
     }
 }

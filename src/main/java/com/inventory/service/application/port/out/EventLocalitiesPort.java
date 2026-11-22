@@ -4,8 +4,8 @@ import reactor.core.publisher.Flux;
 
 /**
  * Output port used to resolve the localities configured for an event, together with their
- * capacity. The static event configuration belongs to the catalog service; inventory only
- * uses it to seed the live counters the first time a locality is queried or reserved.
+ * capacity. The static event configuration belongs to the catalog service; inventory keeps a
+ * local projection fed by Kafka integration events and uses it only to seed live counters.
  */
 public interface EventLocalitiesPort {
 

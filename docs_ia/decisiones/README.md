@@ -1,7 +1,13 @@
-﻿# Decisiones arquitectÃ³nicas
+﻿# Decisiones arquitectónicas
 
-Formato: `DA-xxx-<titulo>.md`, consecutivo. **No sobrescribir** decisiones anteriores: si algo cambia, crear una decisiÃ³n nueva.
+Formato: `DA-xxx-<titulo>.md`, consecutivo. **No sobrescribir** decisiones anteriores: si algo cambia, crear una decisión nueva.
 
-Cada decisiÃ³n debe incluir: contexto, problema, alternativas consideradas, recomendaciÃ³n, ventajas, desventajas, impacto y estado.
+Cada decisión debe incluir: contexto, problema, alternativas consideradas, recomendación, ventajas, desventajas, impacto y estado.
 
-Estados: `PROPUESTA` hasta recibir aprobaciÃ³n humana explÃ­cita; solo entonces `APROBADA` y aplicable.
+Estados: `PROPUESTA` hasta recibir aprobación humana explícita; solo entonces `APROBADA` y aplicable.
+
+| ID | Título | Estado |
+|---|---|---|
+| DA-008 | Historial de reservas para cualquier rol autenticado | PENDIENTE de documentar |
+| DA-009 | Quitar la llamada síncrona de inventario a catálogo | APROBADA |
+| DA-010 | Métricas Prometheus en inventario para el informe de carga | APROBADA |

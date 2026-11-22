@@ -11,10 +11,10 @@ import reactor.core.publisher.Mono;
 /**
  * Composes the live availability of every locality of an event.
  *
- * <p>Locality ids and their declared capacity come from the catalog (static configuration);
- * the available quantity is owned by inventory and lives in Redis. The first time a locality
- * is queried its counter is seeded with the catalog capacity, so a freshly created event is
- * immediately sellable without an explicit initialization step.
+ * <p>Locality ids and their declared capacity come from the catalog (static configuration)
+ * through a local projection fed by Kafka; the available quantity is owned by inventory and
+ * lives in Redis. The first time a locality is queried its counter is seeded with the catalog
+ * capacity, so an event published while inventory was down becomes sellable on the next read.
  */
 @Service
 public class GetAvailabilityService implements GetAvailabilityUseCase {
